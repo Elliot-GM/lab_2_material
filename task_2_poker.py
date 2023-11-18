@@ -1,9 +1,12 @@
 import random
-from enum import Enum
 import poker_environment as pe
+from copy import deepcopy 
+from math import inf
 
 card_ranks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A']
 card_suits = ['s', 'h', 'd', 'c']
+
+AGENT_ACTIONS_VALUE = {'CALL': 0, 'BET5': 5, 'BET10': 10, 'BET25': 25, 'FOLD': 5}
 
 def findWinner(player_cards_1, playerr_cards_2):
     hand_1 = pe.identify_hand(player_cards_1)
@@ -21,6 +24,88 @@ def findWinner(player_cards_1, playerr_cards_2):
         else:
             return -1
 
+class HandNodes:
+    def __init__(self, winner, hands, players_cpy, bidding_nr):
+        self.firstNodes = []
+        self.winner = winner
+        self.hands = hands
+        self.players_cpy = players_cpy
+        self.bidding_nr = bidding_nr
+
+    def fillNodes(self):
+        for AA in pe.AGENT_ACTIONS:
+            if AA != 'FOLD' and self.players_cpy[0].money - AGENT_ACTIONS_VALUE[AA] >= 0:
+                self.firstNodes.insert(0, Node(None, 0, AA, self.winner, deepcopy(self.players_cpy), self.bidding_nr))
+                self.firstNodes[0].generateChild()
+
+class Node:
+    def __init__(self, parent, player, action, winner, players_cpy, depth=0, total_bet=0):
+        self.parent: Node = parent
+        self.childs = []
+        self.player = player
+        self.action = action
+        self.depth = depth
+        self.winner = winner
+        self.total_bet = total_bet + AGENT_ACTIONS_VALUE[action] if winner == 0 else total_bet - AGENT_ACTIONS_VALUE[action]
+        self.players_cpy = players_cpy
+        self.players_cpy[self.player].money -= AGENT_ACTIONS_VALUE[self.action]
+
+    def generateChild(self):
+        if self.depth == 5:
+            return
+        if self.action == 'FOLD' or self.action == 'CALL':
+            return
+
+        if self.depth == 4:
+            if self.players_cpy[self.player].money - AGENT_ACTIONS_VALUE['FOLD'] >= 0:
+                self.childs.insert(0, Node(self, 1 if self.player == 0 else 0, 'FOLD', self.winner, deepcopy(self.players_cpy), self.depth+1, self.total_bet))
+                self.childs[0].generateChild()
+        else:
+            for AA in pe.AGENT_ACTIONS:
+                if self.players_cpy[self.player].money - AGENT_ACTIONS_VALUE[AA] >= 0:
+                    self.childs.insert(0, Node(self, 1 if self.player == 0 else 0, AA, self.winner, deepcopy(self.players_cpy), self.depth+1, self.total_bet))
+                    self.childs[0].generateChild()
+
+def dfs(players, all_hands, bidding_nr):
+    hn = []
+    tmp_players = deepcopy(players)
+    list_of_actions = []
+
+    for hands in all_hands:
+        winner = findWinner(hands[0], hands[1])
+        hn.insert(0, HandNodes(winner, hands, tmp_players, bidding_nr))
+        hn[0].fillNodes()
+
+        best_depth = inf
+        best_value = -inf
+        best_node = None
+        queue = []
+
+        for first_node in hn[0].firstNodes:
+            queue.append(first_node)
+            while len(queue) > 0:
+                if best_value < queue[0].total_bet:
+                    best_value = queue[0].total_bet
+                    best_depth = queue[0].depth
+                    best_node = queue[0]
+                elif best_value == queue[0].total_bet and best_depth > queue[0].depth:
+                    best_value = queue[0].total_bet
+                    best_depth = queue[0].depth
+                    best_node = queue[0]
+                for child in queue[0].childs:
+                    queue.append(child)
+                queue.pop(0)
+        tmp_players = deepcopy(best_node.players_cpy)
+        tmp_players[winner].money += best_node.total_bet
+        tmp = best_node
+        tmp_list_of_actions = []
+        while tmp != None:
+            tmp_list_of_actions.insert(0, tmp.action)
+            tmp = tmp.parent
+        list_of_actions = list_of_actions + tmp_list_of_actions
+
+    return list_of_actions
+
 class Player:
     def __init__(self, id, money):
         self.id = id
@@ -36,17 +121,10 @@ class Player:
         self.bet = 0
         self.last_action = 0
 
-    def agentAction(self, opponent, all_hands):
-        counter = 0
-        for hand_one, hand_two in all_hands:
-            winner = findWinner(hand_one, hand_two)
-            if winner == 0:
-                counter += 1
-
-        if findWinner(all_hands[0][0], all_hands[0][1]) == 0:
-            self.last_action = 'BET25'
-        else:
-            self.last_action = 'FOLD'
+    def agentAction(self, players, all_hands, bidding_nr):
+        list_of_actions = dfs(players, all_hands, bidding_nr)
+        print("list_of_actions", list_of_actions)
+        self.last_action = list_of_actions[0]
 
 class PokerGame:
     def __init__(self, starting_money=100, max_hand=4):
@@ -97,8 +175,6 @@ class PokerGame:
             print("self.players[1].cards", self.players[1].cards)
             winner = findWinner(self.players[0].cards, self.players[1].cards)
 
-        for player in self.players:
-            player.money -= player.bet
         if winner == -1:
             print("draw")
             self.players[0].money += self.hand_total_bet/2
@@ -128,16 +204,10 @@ class PokerGame:
         print("player 1 data : ", self.players[1].money)
         pass
 
-    def managePlayerData(self, player, opponent):
-        if player.last_action == 'CALL':
-            player.bet = opponent.bet
-        elif player.last_action == 'BET5':
-            player.bet = 5
-        elif player.last_action == 'BET10':
-            player.bet = 10
-        elif player.last_action == 'BET25':
-            player.bet = 25
-        self.hand_total_bet = player.bet + opponent.bet
+    def managePlayerData(self, player):
+        player.bet = AGENT_ACTIONS_VALUE[player.last_action]
+        player.money -= player.bet
+        self.hand_total_bet += player.bet
 
     def gameLoop(self):
         while self.gameOver() == False and self.hand < self.max_hand:
@@ -145,18 +215,20 @@ class PokerGame:
             print("hand : ", self.hand)
 
             bidding_nr = 0
-
-            while self.players[self.index_player].last_action != 'CALL' and self.players[self.index_player].last_action != 'SHOWDOWN':
+            while self.players[0].last_action != 'CALL' and self.players[0].last_action != 'SHOWDOWN' and self.players[1].last_action != 'CALL' and self.players[1].last_action != 'SHOWDOWN':
+                print("players[0].money : ", self.players[0].money)
+                print("players[1].money : ", self.players[1].money)
+                print("total bet : ", self.hand_total_bet)
                 if self.index_player == 0:
-                    self.players[0].agentAction(self.players[1], self.all_hands)
-                    self.managePlayerData(self.players[0], self.players[1])
+                    self.players[0].agentAction(self.players, self.all_hands, bidding_nr)
+                    self.managePlayerData(self.players[0])
                     self.index_player = 1
                 else:
                     current_hand_type = pe.identify_hand(self.players[1].cards)
                     self.players[1].last_action, opponent_action_value = pe.poker_strategy_example(current_hand_type[0], current_hand_type[1], self.players[1].money, self.players[1].last_action, self.players[1].bet, self.players[1].money, self.hand_total_bet, bidding_nr)
                     if self.players[1].last_action == 'BET':
                         self.players[1].last_action += str(opponent_action_value)
-                    self.managePlayerData(self.players[1], self.players[0])
+                    self.managePlayerData(self.players[1])
                     self.index_player = 0
                 bidding_nr += 1
             self.endHand()
