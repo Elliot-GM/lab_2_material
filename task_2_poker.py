@@ -2,6 +2,7 @@ import random
 import poker_environment as pe
 from copy import deepcopy 
 from math import inf
+from enum import Enum
 
 card_ranks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A']
 card_suits = ['s', 'h', 'd', 'c']
@@ -66,7 +67,24 @@ class Node:
                     self.childs.insert(0, Node(self, 1 if self.player == 0 else 0, AA, self.winner, deepcopy(self.players_cpy), self.depth+1, self.total_bet))
                     self.childs[0].generateChild()
 
-def dfs(players, all_hands, bidding_nr):
+class Algo(Enum):
+    BFS = 0
+    DFS = 1
+
+class Complexity(Enum):
+    SIMPLE = 0
+    ADVANCED = 1
+
+class AlgoComplexity:
+    def __init__(self, algo, complexity):
+        self.algo = algo
+        self.complexity = complexity
+    
+    def randomUpdate(self):
+        self.complexity = random.choice(list(Complexity))
+        self.algo = random.choice(list(Algo))
+
+def bfs_dfs(players, all_hands, bidding_nr, type):
     hn = []
     tmp_players = deepcopy(players)
     list_of_actions = []
@@ -82,8 +100,14 @@ def dfs(players, all_hands, bidding_nr):
         queue = []
 
         for first_node in hn[0].firstNodes:
-            queue.append(first_node)
+            if type.algo == Algo.BFS:
+                queue.insert(0, first_node)
+            else:
+                queue.append(first_node)
             while len(queue) > 0:
+                if type.complexity == Complexity.ADVANCED and queue[0].total_bet / (queue[0].depth + 1) < best_value:
+                    queue.pop(0)
+                    continue
                 if best_value < queue[0].total_bet:
                     best_value = queue[0].total_bet
                     best_depth = queue[0].depth
@@ -93,8 +117,15 @@ def dfs(players, all_hands, bidding_nr):
                     best_depth = queue[0].depth
                     best_node = queue[0]
                 for child in queue[0].childs:
-                    queue.append(child)
-                queue.pop(0)
+                    if type.algo == Algo.BFS:
+                        queue.insert(0, child)
+                    else:
+                        queue.append(child)
+                if type.algo == Algo.BFS:
+                    queue.pop(len(queue)-1)
+                else:
+                    queue.pop(0)
+
         tmp_players = deepcopy(best_node.players_cpy)
         tmp_players[winner].money += best_node.total_bet
         tmp = best_node
@@ -113,6 +144,7 @@ class Player:
         self.money = money
         self.bet = 0
         self.last_action = 0
+        self.algoComplexity = AlgoComplexity(random.choice(list(Algo)), random.choice(list(Complexity)))
 
     def newTurn(self, cards):
         self.cards = cards
@@ -122,8 +154,9 @@ class Player:
         self.last_action = 0
 
     def agentAction(self, players, all_hands, bidding_nr):
-        list_of_actions = dfs(players, all_hands, bidding_nr)
-        print("list_of_actions", list_of_actions)
+
+        list_of_actions = bfs_dfs(players, all_hands, bidding_nr, self.algoComplexity)
+        # self.algoComplexity.randomUpdate()
         self.last_action = list_of_actions[0]
 
 class PokerGame:
@@ -216,9 +249,6 @@ class PokerGame:
 
             bidding_nr = 0
             while self.players[0].last_action != 'CALL' and self.players[0].last_action != 'SHOWDOWN' and self.players[1].last_action != 'CALL' and self.players[1].last_action != 'SHOWDOWN':
-                print("players[0].money : ", self.players[0].money)
-                print("players[1].money : ", self.players[1].money)
-                print("total bet : ", self.hand_total_bet)
                 if self.index_player == 0:
                     self.players[0].agentAction(self.players, self.all_hands, bidding_nr)
                     self.managePlayerData(self.players[0])
@@ -232,6 +262,7 @@ class PokerGame:
                     self.index_player = 0
                 bidding_nr += 1
             self.endHand()
+            print("\n")
         self.endGame()
 
 poker_game = PokerGame()

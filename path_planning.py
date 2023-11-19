@@ -180,9 +180,9 @@ from task_1_astar_heuristic import astarHeuristicSearch
 
 map_h_object, info = generateMap2d_obstacle([50, 50])
 
-plt.clf()
-plt.imshow(map_h_object)
-plt.show()
+# plt.clf()
+# plt.imshow(map_h_object)
+# plt.show()
 
 example_solved_map = map_h_object
 example_solved_path = np.array([[xx, xx*2] if xx % 2 == 0 else [xx, xx+1] for xx in range(2)])
@@ -193,8 +193,38 @@ example_solved_path = np.array([[xx, xx*2] if xx % 2 == 0 else [xx, xx+1] for xx
 # solved_path = greedySearch(map_h_object)
 # solved_path = astarEuclidianSearch(map_h_object)
 # solved_path = astarManhattanSearch(map_h_object)
-solved_path = astarHeuristicSearch(map_h_object)
+# solved_path = astarHeuristicSearch(map_h_object)
 
-plotMap(example_solved_map, solved_path)
+# plotMap(example_solved_map, solved_path)
+
+import time
+
+for i in range(10):
+    map_h_object, info = generateMap2d_obstacle([50, 50])
+    example_solved_map = map_h_object
+    example_solved_path = np.array([[xx, xx*2] if xx % 2 == 0 else [xx, xx+1] for xx in range(2)])
+
+    debut = time.time()
+    solved_path = astarHeuristicSearch(map_h_object)
+    fin = time.time()
+    duree = fin - debut
+    print("solved_path:", len(solved_path))
+    print("Durée d'exécution:", duree, "secondes")
+
+# solved_path = randomSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = BFSSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = DFSSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = greedySearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = astarEuclidianSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = astarManhattanSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+# solved_path = astarHeuristicSearch(map_h_object)
+# plotMap(example_solved_map, solved_path)
+
 
 

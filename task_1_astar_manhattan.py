@@ -18,8 +18,10 @@ def myAstar(map, start_pos, end_pos):
     start_node = Node(None, start_pos)
     unused_nodes = [start_node]
     used_nodes = []
+    expanded = 0
 
     while len(unused_nodes) > 0:
+        expanded += 1
         unused_nodes = sorted(unused_nodes, key=lambda x: x.euristic)
         current_node = unused_nodes[0]
 
@@ -31,6 +33,7 @@ def myAstar(map, start_pos, end_pos):
             while current_node is not None:
                 path.append(current_node.position)
                 current_node = current_node.parent
+            print("A* manhattan expanded", expanded)
             return path
 
         for new_position in [[0, 1], [1, 0], [0, -1], [-1, 0]]:

@@ -60,13 +60,17 @@ def greedySearch(map):
                 break
 
     curent_node = queue[0]
+    expanded = 0
 
     while True:
+        expanded += 1
         if map[queue[0].pos[0]][queue[0].pos[1]] == -3:
             curent_node = queue[0]
             break
         visited.append(queue[0])
         queue = greedyAddQueue(map, queue, visited, objetif_pos)
+    
+    print("greedy expanded", expanded)
 
     while curent_node.parent != None:
         resolved_path.insert(0, curent_node.pos)

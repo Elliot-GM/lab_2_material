@@ -53,13 +53,17 @@ def DFSSearch(map):
                 break
 
     curent_node = queue[0]
+    expended = 0
 
     while True:
+        expended += 1
         if map[queue[0].pos[0]][queue[0].pos[1]] == -3:
             curent_node = queue[0]
             break
         visited.append(queue[0])
         queue = DFSAddQueue(map, queue, visited)
+
+    print("DFS expended", expended)
 
     while curent_node.parent != None:
         resolved_path.insert(0, curent_node.pos)
