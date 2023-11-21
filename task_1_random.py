@@ -10,11 +10,9 @@ def randomSearch(map):
             if map[y][x] == -2:
                 start_pos = [y, x]
 
-    expanded = 0
     pos = start_pos
     resolved_path.append(pos)
     while map[pos[0]][pos[1]] != -3:
-        expanded += 1
         directions = [[0, 1], [1, 0], [0, -1], [-1, 0]]
         random.shuffle(directions)
 
@@ -29,7 +27,6 @@ def randomSearch(map):
         pos = [pos[0] + directions[0][0], pos[1] + directions[0][1]]
         resolved_path.append(pos)
     
-    print("random expanded", expanded)
     for rp in resolved_path:
         tmp = rp[0]
         rp[0] = rp[1]

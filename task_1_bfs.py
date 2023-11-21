@@ -53,18 +53,14 @@ def BFSSearch(map):
                 break
 
     curent_node = queue[0]
-    expanded = 0
     run = True
     while run:
         queue = BFSNewQueue(map, queue)
         for q in queue:
-            expanded += 1
             if map[q.pos[0]][q.pos[1]] == -3:
                 curent_node = q
                 run = False
                 break
-
-    print("bfs expanded", expanded)
 
     while curent_node.parent != None:
         resolved_path.insert(0, curent_node.pos)

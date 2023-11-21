@@ -144,7 +144,8 @@ class Player:
         self.money = money
         self.bet = 0
         self.last_action = 0
-        self.algoComplexity = AlgoComplexity(random.choice(list(Algo)), random.choice(list(Complexity)))
+        # self.algoComplexity = AlgoComplexity(random.choice(list(Algo)), random.choice(list(Complexity)))
+        self.algoComplexity = AlgoComplexity(Algo.BFS, Complexity.ADVANCED)
 
     def newTurn(self, cards):
         self.cards = cards
